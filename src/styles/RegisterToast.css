@@ -1,0 +1,87 @@
+.toast-card {
+  width: 100%;
+  background-color: #385144; /* Fondo oscuro para que resalte el texto claro */
+  border-radius: 0.75em;
+  transition: ease 0.2s;
+  box-shadow: 0.2em 0.2em 1em rgba(0,0,0,0.1);
+  border: 1.5px solid #c2d8c4;
+  margin-bottom: 24px;
+}
+
+.toast-card:hover {
+  background-color: #385144;
+  border: 1.5px solid #c2d8c4;
+}
+
+.toast-container {
+  padding: 1.75em 2em; /* Usar padding en vez de margin para evitar overflow */
+  display: flex;
+  flex-direction: row;
+  gap: 1.25em; /* Mayor espacio entre indicador y texto */
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.toast-status-ind {
+  width: 0.75em;
+  height: 0.75em;
+  background-color: #c2d8c4;
+  margin: 0.375em 0;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.toast-text-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6em; /* Separar más el título de la descripción */
+  color: #f8f5f2;
+}
+
+.toast-time {
+  font-size: 0.95em;
+  color: #f8f5f2; /* Solicitado por el usuario */
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.toast-text-link {
+  font-weight: 400;
+  text-decoration: none;
+  color: #f8f5f2; /* Solicitado por el usuario */
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.toast-button-wrap {
+  display: flex;
+  flex-direction: row;
+  gap: 1em;
+  align-items: center;
+  margin-top: 12px;
+}
+
+.toast-primary-cta {
+  font-size: 15px;
+  background-color: #c2d8c4;
+  font-weight: 600;
+  color: #222;
+  border: 1px solid transparent;
+  border-radius: 1.5em;
+  cursor: pointer;
+  padding: 8px 24px;
+  transition: all 0.2s;
+  margin-top: 0.5em;
+}
+
+.toast-primary-cta:hover {
+  background-color: #f8f5f2;
+  color: #222;
+}
+
+.toast-right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2em; /* Más interlineado en la estructura general */
+}
