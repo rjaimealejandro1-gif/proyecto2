@@ -168,33 +168,37 @@ const UserManagement = () => {
       const userId = deleteConfirm.id_usuario;
       const userEmail = deleteConfirm.email;
 
+      console.log('Iniciando eliminación para usuario:', userId, userEmail);
+
       // 1. Obtener el auth_id del usuario
-      const { data: profileData } = await supabase
+      const { data: profileData, error: profileError } = await supabase
         .from('usuarios')
         .select('auth_id')
         .eq('id_usuario', userId)
         .maybeSingle();
 
-      // 2. Eliminar registros relacionados en orden
-      const relatedTables = [
-        { table: 'entregas', column: 'id_usuario' },
-        { table: 'calificaciones', column: 'id_usuario' },
-        { table: 'insignias_usuarios', column: 'id_usuario' },
-        { table: 'actividad_historial', column: 'id_usuario' },
-        { table: 'inscripciones', column: 'id_usuario' },
-      ];
+      console.log('Profile data:', profileData, 'Error:', profileError);
 
-      // Eliminar registros relacionados
-      for (const { table, column } of relatedTables) {
-        const { error: deleteRelatedError } = await supabase
-          .from(table)
-          .delete()
-          .eq(column, userId);
-        
-        if (deleteRelatedError) {
-          console.warn(`No se pudo eliminar de ${table}:`, deleteRelatedError.message);
+      // 2. Eliminar registros relacionados (IGNORAR ERRORES si las tablas no existen)
+      const deleteSafely = async (table) => {
+        try {
+          // Intentar eliminar por diferentes columnas comunes
+          await supabase.from(table).delete().eq('id_usuario', userId);
+        } catch (e) {
+          // Ignorar errores
         }
-      }
+      };
+
+      // Ejecutar en paralelo para mayor velocidad
+      await Promise.all([
+        deleteSafely('entregas'),
+        deleteSafely('calificaciones'),
+        deleteSafely('insignias_usuarios'),
+        deleteSafely('actividad_historial'),
+        deleteSafely('inscripciones'),
+        deleteSafely('mensajes'),
+        deleteSafely('respuestas'),
+      ]);
 
       // 3. Eliminar el usuario de la tabla principal
       const { error: deleteUserError } = await supabase
@@ -202,17 +206,19 @@ const UserManagement = () => {
         .delete()
         .eq('id_usuario', userId);
 
-      if (deleteUserError) throw deleteUserError;
+      console.log('Error al eliminar usuario:', deleteUserError);
+
+      if (deleteUserError) {
+        throw new Error(deleteUserError.message);
+      }
 
       // 4. Intentar eliminar de Supabase Auth (si tiene auth_id)
       if (profileData?.auth_id) {
         try {
           const { error: authError } = await supabase.auth.admin.deleteUser(profileData.auth_id);
-          if (authError) {
-            console.warn('No se pudo eliminar de Auth:', authError.message);
-          }
+          console.log('Auth deletion result:', authError);
         } catch (authErr) {
-          console.warn('Error al intentar eliminar de Auth:', authErr.message);
+          console.log('Auth deletion skipped:', authErr.message);
         }
       }
 
@@ -318,10 +324,7 @@ const UserManagement = () => {
                   </td>
                   <td>{new Date(u.fecha_registro).toLocaleDateString('es-ES')}</td>
                   <td className="actions-cell">
-                    <button className="btn-edit" onClick={() => openEditModal(u)}>
-                      Editar
-                    </button>
-                    <button className="btn-delete" onClick={() => confirmDelete(u)}>
+                    <button className="btn-delete" onClick={() => confirmDelete(u)} disabled={u.id_rol === 1}>
                       Eliminar
                     </button>
                   </td>
