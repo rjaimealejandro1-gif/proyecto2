@@ -2,6 +2,37 @@ import { useState, useEffect, useContext } from 'react';
 import { supabase } from '../../supabaseClient';
 import { AuthContext } from '../../context/AuthContext';
 
+// Función directa de eliminación (fuera del componente para evitar problemas de closure)
+const deleteUserDirect = async (userId, userName) => {
+  console.log('=== FUNCIÓN deleteUserDirect INVOCADA ===');
+  console.log('UserID:', userId, 'Name:', userName);
+  
+  try {
+    // Intento simple de eliminación
+    const { data, error } = await supabase
+      .from('usuarios')
+      .delete()
+      .eq('id_usuario', userId)
+      .select();
+    
+    console.log('Resultado delete:', { data, error });
+    
+    if (error) {
+      console.error('Error de Supabase:', error);
+      alert('Error al eliminar: ' + error.message);
+      return { success: false, error: error.message };
+    }
+    
+    alert('Usuario ' + userName + ' eliminado correctamente!');
+    return { success: true };
+    
+  } catch (err) {
+    console.error('Excepción:', err);
+    alert('Error: ' + err.message);
+    return { success: false, error: err.message };
+  }
+};
+
 const UserManagement = () => {
   const { user } = useContext(AuthContext);
   const [users, setUsers] = useState([]);
@@ -21,11 +52,19 @@ const UserManagement = () => {
     // Adjuntar evento de click directamente al botón
     const btn = document.getElementById('btn-confirm-delete');
     if (btn) {
-      btn.onclick = function(e) {
+      btn.onclick = async function(e) {
         console.log('=== BOTÓN CLICK ===');
         e.preventDefault();
         e.stopPropagation();
-        handleDelete();
+        
+        // Llamar a la función directa
+        const result = await deleteUserDirect(deleteConfirm.id_usuario, deleteConfirm.nombre);
+        
+        if (result.success) {
+          // Recargar lista
+          await fetchUsers();
+          setDeleteConfirm(null);
+        }
       };
     }
   }, [deleteConfirm]); // Se ejecuta cuando deleteConfirm cambia
