@@ -164,12 +164,21 @@ const UserManagement = () => {
   };
 
   const handleDelete = async () => {
-    console.log('handleDelete called, deleteConfirm:', deleteConfirm);
+    // Forzar log del estado actual
+    console.log('=== handleDelete INVOCADO ===');
+    console.log('deleteConfirm al inicio:', deleteConfirm);
+    console.log('deleteConfirm.id_usuario:', deleteConfirm?.id_usuario);
     
     if (!deleteConfirm) {
+      alert('ERROR: No hay usuario seleccionado para eliminar. deleteConfirm es null.');
       console.log('No deleteConfirm, returning');
       return;
     }
+    
+    const userId = deleteConfirm.id_usuario;
+    const userName = deleteConfirm.nombre;
+    
+    alert('Iniciando eliminación para: ' + userName + ' (ID: ' + userId + ')');
     
     setError(null);
     setSuccess(null);
@@ -413,8 +422,15 @@ const UserManagement = () => {
       )}
 
       {deleteConfirm && (
-        <div className="modal-overlay" onClick={() => setDeleteConfirm(null)}>
-          <div className="modal-content modal-confirm" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="modal-overlay" 
+          style={{pointerEvents: 'none'}}
+        >
+          <div 
+            className="modal-content modal-confirm" 
+            style={{pointerEvents: 'auto'}}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="modal-header">
               <h2>Confirmar Eliminación</h2>
               <button className="modal-close" onClick={() => setDeleteConfirm(null)}>
@@ -436,24 +452,19 @@ const UserManagement = () => {
               <button 
                 type="button"
                 className="btn-delete" 
-                style={{background: '#c45a5a', color: 'white'}}
-                onClick={(e) => {
-                  console.log('=== onclick fired ===');
-                  e.preventDefault();
-                  e.stopPropagation();
-                  console.log('=== CLICK EN ELIMINAR ===');
-                  console.log('submitting actual:', submitting);
-                  
-                  // Llamar directamente
-                  (async () => {
-                    console.log('Ejecutando delete directamente...');
-                    await handleDelete();
-                    console.log('handleDelete terminó');
-                  })();
-                }}
-                disabled={submitting}
+                style={{background: '#c45a5a', color: 'white', padding: '12px 24px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer'}}
               >
-                {submitting ? 'Eliminando...' : 'CONFIRMAR ELIMINACIÓN'}
+                <span 
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    alert('INICIANDO ELIMINACIÓN para: ' + deleteConfirm?.nombre);
+                    handleDelete();
+                  }}
+                  style={{color: 'white', textDecoration: 'none', display: 'block', cursor: 'pointer'}}
+                >
+                  CONFIRMAR ELIMINACIÓN
+                </span>
               </button>
             </div>
           </div>
