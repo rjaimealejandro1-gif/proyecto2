@@ -67,14 +67,17 @@ const Login = () => {
       return;
     }
 
-    if (email === 'Teseeducativo05' && password === 'tese202320483') {
-      const adminSuccess = await handleAdminLogin('Teseeducativo05', 'tese202320483');
+    if (email === 'Teseeducativo05') {
+      const adminSuccess = await handleAdminLogin('Teseeducativo05', password);
       if (adminSuccess) {
         setSuccess('Inicio de sesion exitoso como Administrador');
         setTimeout(() => {
-          // Usamos window.location para forzar recarga del AuthContext con el nuevo LocalStorage
           window.location.href = '/admin/dashboard';
         }, 300);
+        return;
+      } else {
+        setError('Credenciales de administrador incorrectas');
+        setLoading(false);
         return;
       }
     }
