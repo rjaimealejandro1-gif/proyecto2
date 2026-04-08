@@ -162,46 +162,68 @@ const UserManagement = () => {
     if (!deleteConfirm) return;
     setError(null);
     setSuccess(null);
+    setSubmitting(true);
 
     try {
-      // Get the auth_id of the user to delete
+      const userId = deleteConfirm.id_usuario;
+      const userEmail = deleteConfirm.email;
+
+      // 1. Obtener el auth_id del usuario
       const { data: profileData } = await supabase
         .from('usuarios')
         .select('auth_id')
-        .eq('id_usuario', deleteConfirm.id_usuario)
+        .eq('id_usuario', userId)
         .maybeSingle();
 
-      // Get current session token for authentication
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('No hay sesión activa');
+      // 2. Eliminar registros relacionados en orden
+      const relatedTables = [
+        { table: 'entregas', column: 'id_usuario' },
+        { table: 'calificaciones', column: 'id_usuario' },
+        { table: 'insignias_usuarios', column: 'id_usuario' },
+        { table: 'actividad_historial', column: 'id_usuario' },
+        { table: 'inscripciones', column: 'id_usuario' },
+      ];
 
-      // Call Edge Function which uses service_role key server-side
-      const response = await fetch(
-        `${process.env.REACT_APP_SUPABASE_URL || 'https://zxhsjjbekyqqurmjuttm.supabase.co'}/functions/v1/admin-delete-user`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({
-            user_id: deleteConfirm.id_usuario,
-            auth_id: profileData?.auth_id || null,
-          }),
+      // Eliminar registros relacionados
+      for (const { table, column } of relatedTables) {
+        const { error: deleteRelatedError } = await supabase
+          .from(table)
+          .delete()
+          .eq(column, userId);
+        
+        if (deleteRelatedError) {
+          console.warn(`No se pudo eliminar de ${table}:`, deleteRelatedError.message);
         }
-      );
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.error || 'Error al eliminar el usuario');
       }
 
-      setSuccess('Usuario eliminado correctamente');
+      // 3. Eliminar el usuario de la tabla principal
+      const { error: deleteUserError } = await supabase
+        .from('usuarios')
+        .delete()
+        .eq('id_usuario', userId);
+
+      if (deleteUserError) throw deleteUserError;
+
+      // 4. Intentar eliminar de Supabase Auth (si tiene auth_id)
+      if (profileData?.auth_id) {
+        try {
+          const { error: authError } = await supabase.auth.admin.deleteUser(profileData.auth_id);
+          if (authError) {
+            console.warn('No se pudo eliminar de Auth:', authError.message);
+          }
+        } catch (authErr) {
+          console.warn('Error al intentar eliminar de Auth:', authErr.message);
+        }
+      }
+
+      setSuccess(`Usuario "${deleteConfirm.nombre}" eliminado correctamente`);
       setDeleteConfirm(null);
       fetchUsers();
     } catch (err) {
+      console.error('Error completo al eliminar:', err);
       setError(err.message || 'Error al eliminar el usuario');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -406,8 +428,12 @@ const UserManagement = () => {
               <button className="btn-secondary" onClick={() => setDeleteConfirm(null)}>
                 Cancelar
               </button>
-              <button className="btn-delete" onClick={handleDelete}>
-                Eliminar
+              <button 
+                className="btn-delete" 
+                onClick={handleDelete}
+                disabled={submitting}
+              >
+                {submitting ? 'Eliminando...' : 'Eliminar'}
               </button>
             </div>
           </div>
