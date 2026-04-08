@@ -158,54 +158,73 @@ const UserManagement = () => {
 
   const confirmDelete = (u) => {
     console.log('Usuario seleccionado para eliminación:', u);
+    console.log('deleteConfirm state:', deleteConfirm);
     setDeleteConfirm(u);
+    console.log('deleteConfirm state after set:', u);
   };
 
   const handleDelete = async () => {
-    if (!deleteConfirm) return;
+    console.log('handleDelete called, deleteConfirm:', deleteConfirm);
+    
+    if (!deleteConfirm) {
+      console.log('No deleteConfirm, returning');
+      return;
+    }
     
     setError(null);
     setSuccess(null);
     setSubmitting(true);
 
     console.log('=== INICIANDO ELIMINACIÓN ===');
-    console.log('Usuario a eliminar:', deleteConfirm.id_usuario, deleteConfirm.nombre);
 
     try {
       const userId = deleteConfirm.id_usuario;
       const userName = deleteConfirm.nombre;
+      const userEmail = deleteConfirm.email;
 
-      // Paso 1: Eliminar de la tabla principal (usuarios) - SIMPLE
-      console.log('Eliminando usuario...');
+      console.log('Eliminando usuario ID:', userId, 'Nombre:', userName);
+
+      // HACK: Intentar con update a NULL primero como workaround
+      // Esto ayuda a diagnosticar si es problema de RLS
+      console.log('Verificando acceso a tabla usuarios...');
+      
+      // Prueba 1: Verificar que podemos leer
+      const { data: testRead, error: testReadError } = await supabase
+        .from('usuarios')
+        .select('id_usuario')
+        .eq('id_usuario', userId)
+        .limit(1);
+      
+      console.log('Test read result:', { testRead, testReadError });
+
+      if (testReadError) {
+        throw new Error('No tienes permiso para acceder a la tabla de usuarios: ' + testReadError.message);
+      }
+
+      // Prueba 2: Eliminar
+      console.log('Intentando eliminar...');
       const { data: deleteResult, error: deleteError } = await supabase
         .from('usuarios')
         .delete()
         .eq('id_usuario', userId)
-        .select(); // Esto nos dice cuántos registros se eliminaron
+        .select();
 
-      console.log('Resultado eliminación:', { deleteResult, deleteError });
+      console.log('Resultado delete:', { deleteResult, deleteError });
 
       if (deleteError) {
-        console.error('Error al eliminar:', deleteError);
+        console.error('Error de Supabase:', deleteError);
         throw new Error(deleteError.message);
       }
 
-      // Verificar que se eliminó
-      if (!deleteResult || deleteResult.length === 0) {
-        console.log('Usuario eliminado correctamente (0 retornados = éxito en Supabase)');
-      }
-
-      // Paso 2: Recargar la lista
-      console.log('Recargando lista de usuarios...');
+      console.log('Eliminación exitosa, recargando...');
       await fetchUsers();
 
-      console.log('=== ELIMINACIÓN COMPLETADA ===');
-      setSuccess(`✓ Usuario "${userName}" eliminado correctamente de la base de datos`);
+      setSuccess(`✓ Usuario "${userName}" eliminado correctamente`);
       setDeleteConfirm(null);
       
     } catch (err) {
-      console.error('Error durante eliminación:', err);
-      setError('Error: ' + (err.message || 'No se pudo eliminar el usuario'));
+      console.error('Error completo:', err);
+      setError('Error: ' + (err.message || 'No se pudo eliminar'));
     } finally {
       setSubmitting(false);
     }
