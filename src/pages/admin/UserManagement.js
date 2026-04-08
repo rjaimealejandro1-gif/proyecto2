@@ -18,6 +18,19 @@ const UserManagement = () => {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
+    // Adjuntar evento de click directamente al botón
+    const btn = document.getElementById('btn-confirm-delete');
+    if (btn) {
+      btn.onclick = function(e) {
+        console.log('=== BOTÓN CLICK ===');
+        e.preventDefault();
+        e.stopPropagation();
+        handleDelete();
+      };
+    }
+  }, [deleteConfirm]); // Se ejecuta cuando deleteConfirm cambia
+
+  useEffect(() => {
     fetchUsers();
   }, []);
 
@@ -449,24 +462,25 @@ const UserManagement = () => {
                 }}>
                   Cancelar
                 </button>
-              <button 
-                type="button"
-                className="btn-delete" 
-                style={{background: '#c45a5a', color: 'white', padding: '12px 24px', fontSize: '14px', fontWeight: 'bold', cursor: 'pointer'}}
-              >
-                <span 
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    alert('INICIANDO ELIMINACIÓN para: ' + deleteConfirm?.nombre);
-                    handleDelete();
+                
+                <button 
+                  type="button"
+                  style={{
+                    background: 'red', 
+                    color: 'white', 
+                    padding: '15px 30px', 
+                    fontSize: '16px', 
+                    fontWeight: 'bold', 
+                    cursor: 'pointer',
+                    border: 'none',
+                    borderRadius: '8px',
+                    marginLeft: '10px'
                   }}
-                  style={{color: 'white', textDecoration: 'none', display: 'block', cursor: 'pointer'}}
+                  id="btn-confirm-delete"
                 >
-                  CONFIRMAR ELIMINACIÓN
-                </span>
-              </button>
-            </div>
+                  CLICK AQUÍ PARA ELIMINAR
+                </button>
+              </div>
           </div>
         </div>
       )}
