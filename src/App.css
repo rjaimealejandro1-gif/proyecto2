@@ -39,6 +39,7 @@
   --transition-fast: 0.15s ease;
   --transition: 0.3s ease;
   --transition-slow: 0.5s ease;
+  --bg-subtle: #f1f3f5;
   --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
   --font-mono: 'Fira Code', 'Consolas', 'Monaco', monospace;
 }
@@ -71,6 +72,7 @@
   --info-light: rgba(52, 152, 219, 0.15);
   --border-color: #2a2a3e;
   --border-light: #1e1e30;
+  --bg-subtle: #222238;
   --card-bg: #1a1a2e;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
   --shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
@@ -502,7 +504,8 @@ p {
 }
 
 .auth-card:hover {
-  box-shadow: var(--shadow-xl);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+  transform: translateY(-2px);
 }
 
 .auth-header {
@@ -1031,6 +1034,7 @@ p {
   margin-bottom: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -1041,6 +1045,7 @@ p {
   margin-bottom: 12px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -2901,6 +2906,7 @@ p {
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -2908,6 +2914,7 @@ p {
 .line-clamp-3 {
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
