@@ -416,7 +416,10 @@ const UserManagement = () => {
                 </button>
               <button 
                 className="btn-delete" 
-                onClick={handleDelete}
+                onClick={() => {
+                  console.log('Botón eliminar clickeado');
+                  handleDelete();
+                }}
                 disabled={submitting}
               >
                 {submitting ? 'Eliminando...' : 'Eliminar'}
