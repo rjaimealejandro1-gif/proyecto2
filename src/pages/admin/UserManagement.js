@@ -164,12 +164,39 @@ const UserManagement = () => {
     setSuccess(null);
 
     try {
-      const { error: deleteError } = await supabase
+      // Get the auth_id of the user to delete
+      const { data: profileData } = await supabase
         .from('usuarios')
-        .delete()
-        .eq('id_usuario', deleteConfirm.id_usuario);
+        .select('auth_id')
+        .eq('id_usuario', deleteConfirm.id_usuario)
+        .maybeSingle();
 
-      if (deleteError) throw deleteError;
+      // Get current session token for authentication
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('No hay sesión activa');
+
+      // Call Edge Function which uses service_role key server-side
+      const response = await fetch(
+        `${process.env.REACT_APP_SUPABASE_URL || 'https://zxhsjjbekyqqurmjuttm.supabase.co'}/functions/v1/admin-delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            user_id: deleteConfirm.id_usuario,
+            auth_id: profileData?.auth_id || null,
+          }),
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al eliminar el usuario');
+      }
+
       setSuccess('Usuario eliminado correctamente');
       setDeleteConfirm(null);
       fetchUsers();
@@ -269,6 +296,9 @@ const UserManagement = () => {
                   </td>
                   <td>{new Date(u.fecha_registro).toLocaleDateString('es-ES')}</td>
                   <td className="actions-cell">
+                    <button className="btn-edit" onClick={() => openEditModal(u)}>
+                      Editar
+                    </button>
                     <button className="btn-delete" onClick={() => confirmDelete(u)}>
                       Eliminar
                     </button>
