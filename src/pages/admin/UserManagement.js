@@ -427,21 +427,33 @@ const UserManagement = () => {
               <small style={{color: '#c45a5a'}}>Esta acción eliminará también todos sus registros relacionados (entregas, calificaciones, inscripciones, etc.)</small>
               </p>
               <div className="modal-actions">
-                <button className="btn-secondary" onClick={() => {
+                <button type="button" className="btn-secondary" onClick={() => {
                   console.log('Cancelar eliminación');
                   setDeleteConfirm(null);
                 }}>
                   Cancelar
                 </button>
               <button 
+                type="button"
                 className="btn-delete" 
-                onClick={() => {
-                  console.log('Botón eliminar clickeado');
-                  handleDelete();
+                style={{background: '#c45a5a', color: 'white'}}
+                onClick={(e) => {
+                  console.log('=== onclick fired ===');
+                  e.preventDefault();
+                  e.stopPropagation();
+                  console.log('=== CLICK EN ELIMINAR ===');
+                  console.log('submitting actual:', submitting);
+                  
+                  // Llamar directamente
+                  (async () => {
+                    console.log('Ejecutando delete directamente...');
+                    await handleDelete();
+                    console.log('handleDelete terminó');
+                  })();
                 }}
                 disabled={submitting}
               >
-                {submitting ? 'Eliminando...' : 'Eliminar'}
+                {submitting ? 'Eliminando...' : 'CONFIRMAR ELIMINACIÓN'}
               </button>
             </div>
           </div>
