@@ -27,12 +27,14 @@ const UserManagement = () => {
     try {
       const { data, error: fetchError } = await supabase
         .from('usuarios')
-        .select('id_usuario, nombre, email, id_rol, fecha_registro')
+        .select('id_usuario, nombre, email, id_rol, fecha_registro, auth_id')
         .order('fecha_registro', { ascending: false });
 
       if (fetchError) throw fetchError;
       setUsers(data || []);
+      console.log('Usuarios cargados:', data?.length || 0);
     } catch (err) {
+      console.error('Error al cargar usuarios:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -155,6 +157,7 @@ const UserManagement = () => {
   };
 
   const confirmDelete = (u) => {
+    console.log('Usuario seleccionado para eliminación:', u);
     setDeleteConfirm(u);
   };
 
@@ -427,13 +430,18 @@ const UserManagement = () => {
                 &times;
               </button>
             </div>
-            <p className="confirm-text">
-              ¿Está seguro de eliminar al usuario <strong>{deleteConfirm.nombre}</strong>? Esta acción no se puede deshacer.
-            </p>
-            <div className="modal-actions">
-              <button className="btn-secondary" onClick={() => setDeleteConfirm(null)}>
-                Cancelar
-              </button>
+              <p className="confirm-text">
+              ¿Está seguro de eliminar al usuario <strong>{deleteConfirm?.nombre}</strong>? 
+              <br/>
+              <small style={{color: '#c45a5a'}}>Esta acción eliminará también todos sus registros relacionados (entregas, calificaciones, inscripciones, etc.)</small>
+              </p>
+              <div className="modal-actions">
+                <button className="btn-secondary" onClick={() => {
+                  console.log('Cancelar eliminación');
+                  setDeleteConfirm(null);
+                }}>
+                  Cancelar
+                </button>
               <button 
                 className="btn-delete" 
                 onClick={handleDelete}
