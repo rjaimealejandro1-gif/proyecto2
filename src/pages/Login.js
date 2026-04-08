@@ -24,27 +24,41 @@ const Login = () => {
   }, [role, navigate]);
 
   const handleAdminLogin = async (adminId, adminPassword) => {
-    const { data, error } = await supabase
-      .from('usuarios')
-      .select('*, roles!inner(nombre_rol)')
-      .eq('numero_identificacion', adminId)
-      .eq('contraseña_hash', adminPassword)
-      .eq('roles.nombre_rol', 'administrador')
-      .maybeSingle();
+    console.log('Intentando login de admin con:', adminId);
+    try {
+      const { data, error } = await supabase
+        .from('usuarios')
+        .select('*, roles!inner(nombre_rol)')
+        .eq('numero_identificacion', adminId)
+        .eq('contraseña_hash', adminPassword)
+        .eq('roles.nombre_rol', 'administrador')
+        .maybeSingle();
 
-    if (error || !data) {
+      console.log('Resultado de búsqueda de admin:', { data, error });
+
+      if (error) {
+        console.error('Error de Supabase:', error.message);
+        return false;
+      }
+
+      if (!data) {
+        console.log('No se encontró usuario admin con esos datos');
+        return false;
+      }
+
+      localStorage.setItem('admin_session', JSON.stringify({
+        id: data.id_usuario,
+        numero_identificacion: data.numero_identificacion,
+        nombre: data.nombre,
+        rol: 'administrador',
+        email: data.email
+      }));
+
+      return true;
+    } catch (err) {
+      console.error('Excepción en handleAdminLogin:', err);
       return false;
     }
-
-    localStorage.setItem('admin_session', JSON.stringify({
-      id: data.id_usuario,
-      numero_identificacion: data.numero_identificacion,
-      nombre: data.nombre,
-      rol: 'administrador',
-      email: data.email
-    }));
-
-    return true;
   };
 
   const handleGoogleLogin = async () => {
@@ -61,16 +75,20 @@ const Login = () => {
     setSuccess('');
     setLoading(true);
 
+    console.log('Intentando login con:', email);
+
     if (!email || !password) {
       setError('Por favor completa todos los campos');
       setLoading(false);
       return;
     }
 
+    // Login de admin especial
     if (email === 'Teseeducativo05') {
+      console.log('Detectado login de admin, verificando credenciales...');
       const adminSuccess = await handleAdminLogin('Teseeducativo05', password);
       if (adminSuccess) {
-        setSuccess('Inicio de sesion exitoso como Administrador');
+        setSuccess('Inicio de sesión exitoso como Administrador');
         setTimeout(() => {
           window.location.href = '/admin/dashboard';
         }, 300);
@@ -82,16 +100,39 @@ const Login = () => {
       }
     }
 
-    const { error: signInError } = await signIn({ email, password });
+    // Login normal de Supabase Auth
+    console.log('Intentando login con Supabase Auth...');
+    try {
+      const { data, error: signInError } = await signIn({ email, password });
+      
+      console.log('Resultado de signIn:', { data, error: signInError });
 
-    if (signInError) {
-      setError(signInError.message);
+      if (signInError) {
+        // Error específico de autenticación
+        if (signInError.message.includes('Invalid login credentials')) {
+          setError('Correo o contraseña incorrectos');
+        } else if (signInError.message.includes('User not confirmed')) {
+          setError('Tu correo electrónico aún no está confirmado. Revisa tu bandeja de entrada.');
+        } else {
+          setError(signInError.message);
+        }
+        setLoading(false);
+        return;
+      }
+
+      // Si no hay error pero tampoco datos del usuario, es extraño
+      if (!data?.user) {
+        setError('Error al iniciar sesión. Intenta de nuevo.');
+        setLoading(false);
+        return;
+      }
+
+      setSuccess('Inicio de sesión exitoso');
+    } catch (err) {
+      console.error('Excepción en login:', err);
+      setError('Error de conexión. Intenta de nuevo más tarde.');
       setLoading(false);
-      return;
     }
-
-    setSuccess('Inicio de sesion exitoso');
-    // La redirección ahora está protegida y manejada automáticamente por el useEffect observando 'role'
   };
 
   return (
