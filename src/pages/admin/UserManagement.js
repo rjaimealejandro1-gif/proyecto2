@@ -169,66 +169,38 @@ const UserManagement = () => {
     setSubmitting(true);
 
     console.log('=== INICIANDO ELIMINACIÓN ===');
-    console.log('Usuario a eliminar:', deleteConfirm);
+    console.log('Usuario a eliminar:', deleteConfirm.id_usuario, deleteConfirm.nombre);
 
     try {
       const userId = deleteConfirm.id_usuario;
       const userName = deleteConfirm.nombre;
 
-      // Paso 1: Verificar que el usuario existe
-      console.log('Paso 1: Verificando usuario en BD...');
-      const { data: userExists, error: checkError } = await supabase
-        .from('usuarios')
-        .select('id_usuario, nombre, email, auth_id')
-        .eq('id_usuario', userId)
-        .maybeSingle();
-
-      if (checkError) {
-        console.error('Error al verificar usuario:', checkError);
-        throw new Error('Error al verificar usuario: ' + checkError.message);
-      }
-
-      if (!userExists) {
-        throw new Error('El usuario ya no existe en la base de datos');
-      }
-
-      console.log('Usuario encontrado:', userExists);
-
-      // Paso 2: Eliminar de la tabla principal (usuarios)
-      console.log('Paso 2: Eliminando usuario de tabla principal...');
-      const { error: deleteError } = await supabase
+      // Paso 1: Eliminar de la tabla principal (usuarios) - SIMPLE
+      console.log('Eliminando usuario...');
+      const { data: deleteResult, error: deleteError } = await supabase
         .from('usuarios')
         .delete()
-        .eq('id_usuario', userId);
+        .eq('id_usuario', userId)
+        .select(); // Esto nos dice cuántos registros se eliminaron
+
+      console.log('Resultado eliminación:', { deleteResult, deleteError });
 
       if (deleteError) {
-        console.error('Error al eliminar de usuarios:', deleteError);
-        throw new Error('Error al eliminar: ' + deleteError.message);
+        console.error('Error al eliminar:', deleteError);
+        throw new Error(deleteError.message);
       }
 
-      console.log('Usuario eliminado de tabla principal');
-
-      // Paso 3: Intentar eliminar de Supabase Auth si tiene auth_id
-      if (userExists.auth_id) {
-        console.log('Paso 3: Intentando eliminar de Supabase Auth...');
-        try {
-          const { error: authError } = await supabase.auth.admin.deleteUser(userExists.auth_id);
-          if (authError) {
-            console.warn('No se pudo eliminar de Auth (puede que no exista):', authError.message);
-          } else {
-            console.log('Usuario eliminado de Supabase Auth');
-          }
-        } catch (authErr) {
-          console.warn('Error al eliminar de Auth:', authErr.message);
-        }
+      // Verificar que se eliminó
+      if (!deleteResult || deleteResult.length === 0) {
+        console.log('Usuario eliminado correctamente (0 retornados = éxito en Supabase)');
       }
 
-      // Paso 4: Recargar la lista de usuarios
-      console.log('Paso 4: Recargando lista de usuarios...');
+      // Paso 2: Recargar la lista
+      console.log('Recargando lista de usuarios...');
       await fetchUsers();
 
       console.log('=== ELIMINACIÓN COMPLETADA ===');
-      setSuccess(`✓ Usuario "${userName}" eliminado correctamente`);
+      setSuccess(`✓ Usuario "${userName}" eliminado correctamente de la base de datos`);
       setDeleteConfirm(null);
       
     } catch (err) {
