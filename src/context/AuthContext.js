@@ -13,17 +13,8 @@ export const AuthProvider = ({ children }) => {
   const [needsProfile, setNeedsProfile] = useState(false);
   const [authDebug, setAuthDebug] = useState('Initializing...');
   
-  // Refs para control de flujo y evitar bucles
   const isFetching = useRef(false);
   const lastFetchedId = useRef(null);
-
-  // Helper para depuración global
-  useEffect(() => {
-    window.__TESE_AUTH__ = { user, role, needsProfile, loading, authDebug };
-    if (user) {
-        console.log(`[CONSOLIDATED AUTH] ${authDebug} | User: ${user.email} | Role: ${role} | ProfileReq: ${needsProfile}`);
-    }
-  }, [user, role, needsProfile, loading, authDebug]);
 
   // Función asíncrona para obtener el perfil de usuario con Timeout
   const fetchUserProfile = useCallback(async (userId, email, force = false) => {
@@ -39,18 +30,11 @@ export const AuthProvider = ({ children }) => {
     setAuthDebug(`Checking profile for ${email}...`);
     
     try {
-      const profilePromise = supabase
+      const { data, error } = await supabase
         .from('usuarios')
         .select('id_rol, foto_url')
         .eq('auth_id', userId)
         .maybeSingle();
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile check timeout')), 5000)
-      );
-
-      const result = await Promise.race([profilePromise, timeoutPromise]);
-      const { data, error } = result || {};
 
       if (error) throw error;
 
@@ -72,19 +56,15 @@ export const AuthProvider = ({ children }) => {
       setRole(null);
       return null;
     } catch (err) {
-      console.warn('Profile fetch handled (timeout or error):', err.message);
       setAuthDebug(`Profile Error: ${err.message}. Defaulting to onboarding.`);
-      
-      // Solo forzamos creación de perfil si NO es un error de timeout de red
-      if (err.message !== 'Profile check timeout' && !role) {
-        setNeedsProfile(true);
-      }
+      setNeedsProfile(true);
+      setRole(null);
       return null;
     } finally {
       isFetching.current = false;
       setLoading(false);
     }
-  }, [role]);
+  }, []);
 
   // ÚNICO PUNTO DE ENTRADA para la inicialización de Auth
   useEffect(() => {
@@ -95,18 +75,7 @@ export const AuthProvider = ({ children }) => {
       setAuthDebug('Getting initial session...');
       
       try {
-        const localAdmin = localStorage.getItem('admin_session');
-        if (localAdmin) {
-          const parsed = JSON.parse(localAdmin);
-          if (mounted) {
-            setUser(parsed);
-            setRole('administrador');
-            setNeedsProfile(false);
-            setLoading(false);
-            setAuthDebug('Admin sesión recuperada');
-          }
-          return;
-        }
+
 
         const { data: { session } } = await supabase.auth.getSession();
         if (mounted) {
@@ -126,22 +95,31 @@ export const AuthProvider = ({ children }) => {
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (!mounted) return;
-      
-      if (session?.user) {
-        setUser(session.user);
-        if (event === 'SIGNED_IN' || event === 'USER_UPDATED') {
-          if (lastFetchedId.current !== session.user.id) {
-            setLoading(true);
-            await fetchUserProfile(session.user.id, session.user.email);
-          }
-        }
-      } else if (event === 'SIGNED_OUT') {
+
+      if (event === 'SIGNED_OUT') {
         setUser(null);
         setRole(null);
         setAvatar(null);
         setNeedsProfile(false);
         setLoading(false);
         lastFetchedId.current = null;
+        isFetching.current = false;
+        return;
+      }
+
+      if (!session?.user) return;
+
+      setUser(session.user);
+
+      const shouldSyncProfile =
+        event === 'SIGNED_IN' ||
+        event === 'USER_UPDATED' ||
+        event === 'INITIAL_SESSION' ||
+        event === 'PASSWORD_RECOVERY';
+
+      if (shouldSyncProfile && lastFetchedId.current !== session.user.id) {
+        setLoading(true);
+        await fetchUserProfile(session.user.id, session.user.email);
       }
     });
 
@@ -166,16 +144,17 @@ export const AuthProvider = ({ children }) => {
 
     if (data.user) {
       const roleMapInv = { administrador: 1, docente: 2, estudiante: 3 };
-      const { error: dbError } = await supabase.from('usuarios').insert([
+      const { error } = await supabase.from('usuarios').insert([
         {
           auth_id: data.user.id,
           email: email,
           nombre: nombre,
           id_rol: roleMapInv[roleName],
-          foto_url: avatarUrl
+          foto_url: avatarUrl,
+          contraseña_hash: 'managed_by_supabase_auth',
         }
       ]);
-      if (dbError) console.error('Error creating profile during signup:', dbError);
+      // Silenciar errores durante signup en consola
     }
 
     return { data, error: null };
@@ -185,7 +164,7 @@ export const AuthProvider = ({ children }) => {
     return await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: `${window.location.origin}/login`,
         queryParams: { access_type: 'offline', prompt: 'consent' }
       }
     });
@@ -201,9 +180,10 @@ export const AuthProvider = ({ children }) => {
         {
           auth_id: user.id,
           email: user.email,
-          nombre: user.user_metadata.full_name || user.email.split('@')[0],
+          nombre: user.user_metadata?.full_name || user.email.split('@')[0],
           id_rol: roleMapInv[roleName],
-          foto_url: fotoUrl
+          foto_url: fotoUrl,
+          contraseña_hash: 'managed_by_supabase_auth',
         }
       ]).select();
 
@@ -228,7 +208,6 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     setLoading(true);
-    localStorage.removeItem('admin_session');
     await supabase.auth.signOut();
   };
 

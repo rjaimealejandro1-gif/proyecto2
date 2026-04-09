@@ -8,17 +8,12 @@ const NotificationBell = () => {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
-  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const getUsuarioId = async () => {
       if (!user) return;
       
-      if (user.isAdmin) {
-        const { data } = await supabase.from('usuarios').select('id_usuario').eq('numero_identificacion', 'Teseeducativo05').maybeSingle();
-        if (data) setUsuarioId(data.id_usuario);
-        return;
-      }
+
       
       if (user.id && typeof user.id === 'string' && user.id.length > 10) {
         const { data } = await supabase.from('usuarios').select('id_usuario').eq('auth_id', user.id).maybeSingle();
@@ -33,6 +28,7 @@ const NotificationBell = () => {
     fetchNotifications();
     const interval = setInterval(fetchNotifications, 15000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioId]);
 
   const fetchNotifications = async () => {

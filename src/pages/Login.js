@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { supabase } from '../supabaseClient';
 
 const Login = () => {
-  const { signIn, signInWithGoogle, role } = useAuth();
+  const { signIn, signInWithGoogle, role, user, needsProfile, loading: authLoading } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
   const [email, setEmail] = useState('');
@@ -14,52 +13,25 @@ const Login = () => {
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Observador proactivo de rol para redirigir una vez que la base de datos responda
   useEffect(() => {
+    if (authLoading) return;
+
+    if (user && needsProfile) {
+      navigate('/role-selection', { replace: true });
+      return;
+    }
+
+    if (user && !needsProfile && !role) {
+      navigate('/role-selection', { replace: true });
+      return;
+    }
+
     if (role) {
-      if (role === 'administrador') navigate('/admin/dashboard');
-      else if (role === 'docente') navigate('/docente/dashboard');
-      else if (role === 'estudiante') navigate('/estudiante/dashboard');
+      if (role === 'administrador') navigate('/admin/dashboard', { replace: true });
+      else if (role === 'docente') navigate('/docente/dashboard', { replace: true });
+      else if (role === 'estudiante') navigate('/estudiante/dashboard', { replace: true });
     }
-  }, [role, navigate]);
-
-  const handleAdminLogin = async (adminId, adminPassword) => {
-    console.log('Intentando login de admin con:', adminId);
-    try {
-      const { data, error } = await supabase
-        .from('usuarios')
-        .select('*, roles!inner(nombre_rol)')
-        .eq('numero_identificacion', adminId)
-        .eq('contraseña_hash', adminPassword)
-        .eq('roles.nombre_rol', 'administrador')
-        .maybeSingle();
-
-      console.log('Resultado de búsqueda de admin:', { data, error });
-
-      if (error) {
-        console.error('Error de Supabase:', error.message);
-        return false;
-      }
-
-      if (!data) {
-        console.log('No se encontró usuario admin con esos datos');
-        return false;
-      }
-
-      localStorage.setItem('admin_session', JSON.stringify({
-        id: data.id_usuario,
-        numero_identificacion: data.numero_identificacion,
-        nombre: data.nombre,
-        rol: 'administrador',
-        email: data.email
-      }));
-
-      return true;
-    } catch (err) {
-      console.error('Excepción en handleAdminLogin:', err);
-      return false;
-    }
-  };
+  }, [role, user, needsProfile, authLoading, navigate]);
 
   const handleGoogleLogin = async () => {
     setError('');
@@ -69,13 +41,13 @@ const Login = () => {
     }
   };
 
+
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setLoading(true);
-
-    console.log('Intentando login con:', email);
 
     if (!email || !password) {
       setError('Por favor completa todos los campos');
@@ -83,27 +55,17 @@ const Login = () => {
       return;
     }
 
-    // Login de admin especial
-    if (email === 'Teseeducativo05') {
-      console.log('Detectado login de admin, verificando credenciales...');
-      const adminSuccess = await handleAdminLogin('Teseeducativo05', password);
-      if (adminSuccess) {
-        setSuccess('Inicio de sesión exitoso como Administrador');
-        setTimeout(() => {
-          window.location.href = '/admin/dashboard';
-        }, 300);
-        return;
-      } else {
-        setError('Credenciales de administrador incorrectas');
-        setLoading(false);
-        return;
-      }
+    const trimmed = email.trim();
+    const looksLikeEmail = trimmed.includes('@');
+
+    if (!looksLikeEmail) {
+      setError('Por favor, ingresa un correo electrónico válido');
+      setLoading(false);
+      return;
     }
 
-    // Login normal de Supabase Auth
-    console.log('Intentando login con Supabase Auth...');
     try {
-      const { data, error: signInError } = await signIn({ email, password });
+      const { data, error: signInError } = await signIn({ email: trimmed, password });
       
       console.log('Resultado de signIn:', { data, error: signInError });
 
@@ -131,6 +93,7 @@ const Login = () => {
     } catch (err) {
       console.error('Excepción en login:', err);
       setError('Error de conexión. Intenta de nuevo más tarde.');
+    } finally {
       setLoading(false);
     }
   };
@@ -181,7 +144,7 @@ const Login = () => {
         
         <form onSubmit={handleSubmit}>
           <div className="form-group">
-            <label htmlFor="email">Correo electronico o ID de Administrador</label>
+            <label htmlFor="email">Correo electrónico</label>
             <input
               type="text"
               id="email"

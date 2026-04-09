@@ -1,40 +1,8 @@
-import { useState, useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { supabase } from '../../supabaseClient';
-import { AuthContext } from '../../context/AuthContext';
-
-// Función directa de eliminación (fuera del componente para evitar problemas de closure)
-const deleteUserDirect = async (userId, userName) => {
-  console.log('=== FUNCIÓN deleteUserDirect INVOCADA ===');
-  console.log('UserID:', userId, 'Name:', userName);
-  
-  try {
-    // Intento simple de eliminación
-    const { data, error } = await supabase
-      .from('usuarios')
-      .delete()
-      .eq('id_usuario', userId)
-      .select();
-    
-    console.log('Resultado delete:', { data, error });
-    
-    if (error) {
-      console.error('Error de Supabase:', error);
-      alert('Error al eliminar: ' + error.message);
-      return { success: false, error: error.message };
-    }
-    
-    alert('Usuario ' + userName + ' eliminado correctamente!');
-    return { success: true };
-    
-  } catch (err) {
-    console.error('Excepción:', err);
-    alert('Error: ' + err.message);
-    return { success: false, error: err.message };
-  }
-};
 
 const UserManagement = () => {
-  const { user } = useContext(AuthContext);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -44,30 +12,12 @@ const UserManagement = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [viewingHistory, setViewingHistory] = useState(null);
+  const [userHistory, setUserHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [formData, setFormData] = useState({ nombre: '', email: '', password: '', id_rol: 3 });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    // Adjuntar evento de click directamente al botón
-    const btn = document.getElementById('btn-confirm-delete');
-    if (btn) {
-      btn.onclick = async function(e) {
-        console.log('=== BOTÓN CLICK ===');
-        e.preventDefault();
-        e.stopPropagation();
-        
-        // Llamar a la función directa
-        const result = await deleteUserDirect(deleteConfirm.id_usuario, deleteConfirm.nombre);
-        
-        if (result.success) {
-          // Recargar lista
-          await fetchUsers();
-          setDeleteConfirm(null);
-        }
-      };
-    }
-  }, [deleteConfirm]); // Se ejecuta cuando deleteConfirm cambia
 
   useEffect(() => {
     fetchUsers();
@@ -84,9 +34,7 @@ const UserManagement = () => {
 
       if (fetchError) throw fetchError;
       setUsers(data || []);
-      console.log('Usuarios cargados:', data?.length || 0);
     } catch (err) {
-      console.error('Error al cargar usuarios:', err);
       setError(err.message);
     } finally {
       setLoading(false);
@@ -115,25 +63,36 @@ const UserManagement = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const openCreateModal = () => {
-    setEditingUser(null);
-    setFormData({ nombre: '', email: '', password: '', id_rol: 3 });
-    setFormErrors({});
-    setShowModal(true);
-  };
-
-  const openEditModal = (u) => {
-    setEditingUser(u);
-    setFormData({ nombre: u.nombre, email: u.email, password: '', id_rol: u.id_rol });
-    setFormErrors({});
-    setShowModal(true);
-  };
-
   const closeModal = () => {
     setShowModal(false);
     setEditingUser(null);
     setFormData({ nombre: '', email: '', password: '', id_rol: 3 });
     setFormErrors({});
+  };
+
+  const fetchUserHistory = async (user) => {
+    setViewingHistory(user);
+    setHistoryLoading(true);
+    setUserHistory([]);
+    try {
+      const { data, error } = await supabase
+        .from('historial_actividad')
+        .select('*')
+        .eq('id_usuario', user.id_usuario)
+        .order('created_at', { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      setUserHistory(data || []);
+    } catch (err) {
+      // Ignorar errores silenciados
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const closeHistoryModal = () => {
+    setViewingHistory(null);
+    setUserHistory([]);
   };
 
   const handleInputChange = (e) => {
@@ -162,41 +121,8 @@ const UserManagement = () => {
         if (updateError) throw updateError;
         setSuccess('Usuario actualizado correctamente');
       } else {
-        const roleMapping = { 1: 'administrador', 2: 'docente', 3: 'estudiante' };
-        const { error: signUpError } = await supabase.rpc('create_user_with_role', {
-          p_nombre: formData.nombre.trim(),
-          p_email: formData.email.trim().toLowerCase(),
-          p_password: formData.password,
-          p_id_rol: parseInt(formData.id_rol),
-        });
-
-        if (signUpError) {
-          const { data: authData, error: authError } = await supabase.auth.signUp({
-            email: formData.email.trim().toLowerCase(),
-            password: formData.password,
-          });
-
-          if (authError) throw authError;
-
-          if (authData.user) {
-            const { error: dbError } = await supabase.from('usuarios').insert([
-              {
-                auth_id: authData.user.id,
-                nombre: formData.nombre.trim(),
-                email: formData.email.trim().toLowerCase(),
-                contraseña_hash: 'managed_by_supabase_auth',
-                id_rol: parseInt(formData.id_rol),
-              },
-            ]);
-
-            if (dbError) {
-              await supabase.auth.admin?.deleteUser(authData.user.id);
-              throw dbError;
-            }
-          }
-        }
-
-        setSuccess('Usuario creado correctamente');
+        setError('La creación de usuarios se realiza desde registro para mantener sesiones seguras.');
+        return;
       }
 
       closeModal();
@@ -209,82 +135,35 @@ const UserManagement = () => {
   };
 
   const confirmDelete = (u) => {
-    console.log('Usuario seleccionado para eliminación:', u);
-    console.log('deleteConfirm state:', deleteConfirm);
     setDeleteConfirm(u);
-    console.log('deleteConfirm state after set:', u);
   };
 
   const handleDelete = async () => {
-    // Forzar log del estado actual
-    console.log('=== handleDelete INVOCADO ===');
-    console.log('deleteConfirm al inicio:', deleteConfirm);
-    console.log('deleteConfirm.id_usuario:', deleteConfirm?.id_usuario);
-    
     if (!deleteConfirm) {
-      alert('ERROR: No hay usuario seleccionado para eliminar. deleteConfirm es null.');
-      console.log('No deleteConfirm, returning');
       return;
     }
-    
-    const userId = deleteConfirm.id_usuario;
-    const userName = deleteConfirm.nombre;
-    
-    alert('Iniciando eliminación para: ' + userName + ' (ID: ' + userId + ')');
-    
+
     setError(null);
     setSuccess(null);
     setSubmitting(true);
 
-    console.log('=== INICIANDO ELIMINACIÓN ===');
-
     try {
       const userId = deleteConfirm.id_usuario;
       const userName = deleteConfirm.nombre;
-      const userEmail = deleteConfirm.email;
-
-      console.log('Eliminando usuario ID:', userId, 'Nombre:', userName);
-
-      // HACK: Intentar con update a NULL primero como workaround
-      // Esto ayuda a diagnosticar si es problema de RLS
-      console.log('Verificando acceso a tabla usuarios...');
-      
-      // Prueba 1: Verificar que podemos leer
-      const { data: testRead, error: testReadError } = await supabase
-        .from('usuarios')
-        .select('id_usuario')
-        .eq('id_usuario', userId)
-        .limit(1);
-      
-      console.log('Test read result:', { testRead, testReadError });
-
-      if (testReadError) {
-        throw new Error('No tienes permiso para acceder a la tabla de usuarios: ' + testReadError.message);
-      }
-
-      // Prueba 2: Eliminar
-      console.log('Intentando eliminar...');
-      const { data: deleteResult, error: deleteError } = await supabase
-        .from('usuarios')
-        .delete()
-        .eq('id_usuario', userId)
-        .select();
-
-      console.log('Resultado delete:', { deleteResult, deleteError });
-
+      const { data, error: deleteError } = await supabase.rpc('admin_delete_user', {
+        p_target_user_id: userId,
+      });
       if (deleteError) {
-        console.error('Error de Supabase:', deleteError);
         throw new Error(deleteError.message);
       }
+      if (!data?.ok) {
+        throw new Error('No se pudo completar la eliminación');
+      }
 
-      console.log('Eliminación exitosa, recargando...');
       await fetchUsers();
-
       setSuccess(`✓ Usuario "${userName}" eliminado correctamente`);
       setDeleteConfirm(null);
-      
     } catch (err) {
-      console.error('Error completo:', err);
       setError('Error: ' + (err.message || 'No se pudo eliminar'));
     } finally {
       setSubmitting(false);
@@ -381,10 +260,15 @@ const UserManagement = () => {
                     </span>
                   </td>
                   <td>{new Date(u.fecha_registro).toLocaleDateString('es-ES')}</td>
-                  <td className="actions-cell">
-                    <button className="btn-delete" onClick={() => confirmDelete(u)} disabled={u.id_rol === 1}>
-                      Eliminar
-                    </button>
+                  <td>
+                    <div className="actions-wrapper">
+                      <button className="btn-edit" onClick={() => fetchUserHistory(u)}>
+                        Historial
+                      </button>
+                      <button className="btn-delete" onClick={() => confirmDelete(u)} disabled={u.id_rol === 1}>
+                        Eliminar
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -393,8 +277,8 @@ const UserManagement = () => {
         </table>
       </div>
 
-      {showModal && (
-        <div className="modal-overlay" onClick={closeModal}>
+      {showModal && createPortal(
+        <div className="admin-modal-overlay" onClick={closeModal}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{editingUser ? 'Editar Usuario' : 'Crear Usuario'}</h2>
@@ -470,17 +354,17 @@ const UserManagement = () => {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {deleteConfirm && (
+      {deleteConfirm && createPortal(
         <div 
-          className="modal-overlay" 
-          style={{pointerEvents: 'none'}}
+          className="admin-modal-overlay" 
+          onClick={() => setDeleteConfirm(null)}
         >
           <div 
             className="modal-content modal-confirm" 
-            style={{pointerEvents: 'auto'}}
             onClick={(e) => e.stopPropagation()}
           >
             <div className="modal-header">
@@ -489,14 +373,25 @@ const UserManagement = () => {
                 &times;
               </button>
             </div>
-              <p className="confirm-text">
-              ¿Está seguro de eliminar al usuario <strong>{deleteConfirm?.nombre}</strong>? 
-              <br/>
-              <small style={{color: '#c45a5a'}}>Esta acción eliminará también todos sus registros relacionados (entregas, calificaciones, inscripciones, etc.)</small>
-              </p>
+            
+            <div className="user-profile-card">
+               <img src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${deleteConfirm?.email}`} alt="Avatar" className="profile-card-avatar" />
+               <div className="profile-card-info">
+                  <span className="profile-card-name">{deleteConfirm?.nombre}</span>
+                  <span className="profile-card-email">{deleteConfirm?.email}</span>
+                  <span className={`badge ${getRoleBadgeClass(deleteConfirm?.id_rol)}`} style={{marginTop: '6px', alignSelf: 'flex-start'}}>
+                    {getRoleLabel(deleteConfirm?.id_rol)}
+                  </span>
+               </div>
+            </div>
+
+            <p className="confirm-text">
+              ¿Está seguro de eliminar a este usuario de forma permanente? 
+              <br/><br/>
+              <span className="warning-text">⚠ Esta acción eliminará de forma irreversible su cuenta autenticada y destruirá en cascada TODOS sus cursos, foros, entregas, calificaciones y registros.</span>
+            </p>
               <div className="modal-actions">
                 <button type="button" className="btn-secondary" onClick={() => {
-                  console.log('Cancelar eliminación');
                   setDeleteConfirm(null);
                 }}>
                   Cancelar
@@ -504,24 +399,50 @@ const UserManagement = () => {
                 
                 <button 
                   type="button"
-                  style={{
-                    background: 'red', 
-                    color: 'white', 
-                    padding: '15px 30px', 
-                    fontSize: '16px', 
-                    fontWeight: 'bold', 
-                    cursor: 'pointer',
-                    border: 'none',
-                    borderRadius: '8px',
-                    marginLeft: '10px'
-                  }}
-                  id="btn-confirm-delete"
+                  className="modal-btn-danger"
+                  onClick={handleDelete}
+                  disabled={submitting}
                 >
-                  CLICK AQUÍ PARA ELIMINAR
+                  {submitting ? 'Eliminando...' : 'Eliminar usuario'}
                 </button>
               </div>
           </div>
-        </div>
+        </div>,
+        document.body
+      )}
+
+      {viewingHistory && createPortal(
+        <div className="admin-modal-overlay" onClick={closeHistoryModal}>
+          <div className="modal-content history-modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Historial de Actividad: {viewingHistory.nombre}</h2>
+              <button className="modal-close" onClick={closeHistoryModal}>&times;</button>
+            </div>
+            {historyLoading ? (
+              <div className="admin-page-loading list-loader">Cargando historial...</div>
+            ) : userHistory.length === 0 ? (
+              <div className="no-data-cell empty-history">El usuario no tiene una actividad registrada.</div>
+            ) : (
+              <div className="history-list">
+                {userHistory.map((item) => (
+                  <div key={item.id_actividad} className="history-item">
+                    <div className="history-desc">{item.descripcion}</div>
+                    <div className="history-meta">
+                      <span className="history-badge">
+                        {item.tipo.replace(/_/g, ' ').toUpperCase()}
+                      </span>
+                      {new Date(item.created_at).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="modal-actions">
+              <button type="button" className="modal-btn-secondary" onClick={closeHistoryModal}>Cerrar Historial</button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
 
       <style>{`
@@ -631,8 +552,9 @@ const UserManagement = () => {
         .badge-admin { background: var(--accent-subtle); color: var(--accent); }
         .badge-docente { background: var(--success-subtle); color: var(--success); }
         .badge-estudiante { background: var(--warning-subtle); color: var(--warning); }
-        .actions-cell {
+        .actions-wrapper {
           display: flex;
+          align-items: center;
           gap: 8px;
         }
         .btn-primary {
@@ -682,26 +604,38 @@ const UserManagement = () => {
           font-weight: 500;
         }
         .btn-delete:hover { background: var(--danger-subtle); }
-        .modal-overlay {
+        .admin-modal-overlay {
           position: fixed;
           top: 0;
           left: 0;
           right: 0;
           bottom: 0;
-          background: rgba(0,0,0,0.5);
+          background: rgba(0,0,0,0.7);
           display: flex;
           align-items: center;
           justify-content: center;
-          z-index: 1000;
+          z-index: 9999;
+          backdrop-filter: blur(5px);
         }
         .modal-content {
-          background: var(--bg-surface);
+          background: #ffffff;
           border-radius: 20px;
           padding: 24px;
           width: 100%;
           max-width: 480px;
           max-height: 90vh;
           overflow-y: auto;
+          box-shadow: 0px 10px 40px rgba(0,0,0,0.5);
+          color: #1a2517;
+          border: 1px solid var(--border-default, #e0e0e0);
+        }
+        .history-modal-content {
+          max-width: 600px;
+        }
+        [data-theme="dark"] .modal-content {
+          background: #222222;
+          color: #c2d8c4;
+          border: 1px solid #333;
         }
         .modal-confirm {
           max-width: 400px;
@@ -773,9 +707,165 @@ const UserManagement = () => {
           margin-top: 24px;
         }
         .confirm-text {
-          color: var(--text-secondary);
+          color: var(--text-primary, #333);
           font-size: 15px;
           line-height: 1.5;
+          margin-top: 15px;
+        }
+        .warning-text {
+          color: #d32f2f;
+          font-weight: 700;
+          font-size: 14px;
+        }
+        .user-profile-card {
+          display: flex;
+          align-items: center;
+          gap: 16px;
+          background: var(--bg-subtle, #eaeaea);
+          padding: 16px;
+          border-radius: 12px;
+          margin: 15px 0;
+          border: 1px solid var(--border-default, #ccc);
+        }
+        [data-theme="dark"] .user-profile-card {
+          background: var(--bg-subtle, #2a2a2a);
+          border-color: #444;
+        }
+        .profile-card-avatar {
+          width: 65px;
+          height: 65px;
+          border-radius: 50%;
+          background: #fff;
+          box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+        .profile-card-info {
+          display: flex;
+          flex-direction: column;
+        }
+        .profile-card-name {
+          font-size: 18px;
+          font-weight: 700;
+          color: var(--text-primary, #111);
+        }
+        [data-theme="dark"] .profile-card-name {
+          color: #c2d8c4;
+        }
+        .profile-card-email {
+          font-size: 14px;
+          color: #556c52;
+          margin-top: 2px;
+        }
+        [data-theme="dark"] .profile-card-email {
+          color: #92a894;
+        }
+
+        /* Historial Modal */
+        .list-loader {
+          min-height: 200px;
+        }
+        .empty-history {
+          margin: 40px 0;
+          color: inherit;
+          opacity: 0.7;
+        }
+        .history-list {
+          max-height: 400px;
+          overflow-y: auto;
+          padding-right: 10px;
+        }
+        .history-item {
+          padding: 16px;
+          border-bottom: 1px solid #e0e6df;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+        [data-theme="dark"] .history-item {
+          border-bottom: 1px solid #383838;
+        }
+        .history-item:last-child {
+          border-bottom: none;
+        }
+        .history-desc {
+          font-size: 14px;
+          font-weight: 600;
+          color: inherit;
+        }
+        .history-meta {
+          font-size: 12px;
+          color: #556c52;
+          display: flex;
+          align-items: center;
+          gap: 10px;
+        }
+        [data-theme="dark"] .history-meta {
+          color: #8da48f;
+        }
+        .history-badge {
+          padding: 4px 8px;
+          background: #e6efe8;
+          color: #244126;
+          border-radius: 6px;
+          font-weight: 500;
+        }
+        [data-theme="dark"] .history-badge {
+          background: #2a3c2c;
+          color: #a4ceaa;
+        }
+
+        /* Modal Buttons */
+        .modal-btn-secondary {
+          background: #eef2ed;
+          color: #1a2517;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 10px;
+          font-size: 14px;
+          cursor: pointer;
+          font-weight: 600;
+          transition: background 0.2s;
+        }
+        .modal-btn-secondary:hover {
+          background: #dce6db;
+        }
+        [data-theme="dark"] .modal-btn-secondary {
+          background: #333333;
+          color: #c2d8c4;
+        }
+        [data-theme="dark"] .modal-btn-secondary:hover {
+          background: #444444;
+        }
+
+        .modal-btn-danger {
+          background: #ffe3e3;
+          color: #d32f2f;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 10px;
+          font-size: 14px;
+          cursor: pointer;
+          font-weight: 700;
+          transition: all 0.2s;
+          margin-left: 10px;
+        }
+        .modal-btn-danger:hover {
+          background: #ffcdd2;
+        }
+        .modal-btn-danger:disabled {
+          background: #f5f5f5;
+          color: #9e9e9e;
+          cursor: not-allowed;
+        }
+        [data-theme="dark"] .modal-btn-danger {
+          background: #4a1c1c;
+          color: #ff8a80;
+        }
+        [data-theme="dark"] .modal-btn-danger:hover {
+          background: #5c2323;
+        }
+        [data-theme="dark"] .modal-btn-danger:disabled {
+          background: #2c2c2c;
+          color: #555555;
         }
       `}</style>
     </div>

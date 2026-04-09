@@ -41,7 +41,7 @@ const Register = () => {
 
     setLoading(true);
 
-    const { error: signUpError } = await signUp({
+    const { data: signData, error: signUpError } = await signUp({
       nombre,
       email,
       password,
@@ -52,6 +52,12 @@ const Register = () => {
     if (signUpError) {
       setError(signUpError.message);
       setLoading(false);
+      return;
+    }
+
+    if (signData?.session) {
+      setLoading(false);
+      window.location.replace('/');
       return;
     }
 

@@ -16,18 +16,23 @@ const LandingPage = () => {
     if (user) {
       console.log(`[LANDING REDIRECT] User: ${user.email} | NeedsProfile: ${needsProfile} | Role: ${role}`);
       if (needsProfile === true) {
-        navigate('/role-selection');
-      } else if (role) {
+        navigate('/role-selection', { replace: true });
+        return;
+      }
+      if (role) {
         const dashboardPath = {
           administrador: '/admin/dashboard',
           docente: '/docente/dashboard',
           estudiante: '/estudiante/dashboard'
         }[role];
-        
+
         if (dashboardPath) {
-          navigate(dashboardPath);
+          navigate(dashboardPath, { replace: true });
         }
+        return;
       }
+      
+      navigate('/role-selection', { replace: true });
     }
   }, [user, role, needsProfile, loading, navigate]);
 
