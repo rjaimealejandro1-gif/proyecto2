@@ -186,7 +186,6 @@ export const AuthProvider = ({ children }) => {
     if (!user) return { error: { message: 'No session' } };
     
     try {
-      setLoading(true);
       const roleMapInv = { administrador: 1, docente: 2, estudiante: 3 };
       const { error } = await supabase.from('usuarios').insert([
         {
@@ -213,8 +212,6 @@ export const AuthProvider = ({ children }) => {
       return { error: null };
     } catch (err) {
       return { error: err };
-    } finally {
-      setLoading(false);
     }
   };
 
