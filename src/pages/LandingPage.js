@@ -255,7 +255,7 @@ const LandingPage = () => {
           </div>
           <div className="info-card">
             <h4>Profesor</h4>
-            <p>Leonardo Miguel Moreno Villalba</p>
+            <p>Profesor: Leonardo Miguel Moreno Villalba</p>
           </div>
           <div className="info-card">
             <h4>Materia</h4>
