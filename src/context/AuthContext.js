@@ -187,7 +187,8 @@ export const AuthProvider = ({ children }) => {
     
     try {
       const roleMapInv = { administrador: 1, docente: 2, estudiante: 3 };
-      const { error } = await supabase.from('usuarios').insert([
+      
+      const insertReq = supabase.from('usuarios').insert([
         {
           auth_id: user.id,
           email: user.email,
@@ -197,6 +198,12 @@ export const AuthProvider = ({ children }) => {
           contraseña_hash: 'managed_by_supabase_auth',
         }
       ]).select();
+
+      const timeoutReq = new Promise((resolve) => 
+        setTimeout(() => resolve({ error: new Error('La base de datos de Supabase no respondió a tiempo. Intenta de nuevo.') }), 6000)
+      );
+
+      const { error } = await Promise.race([insertReq, timeoutReq]);
 
       if (error) {
         if (error.code === '23505') {
