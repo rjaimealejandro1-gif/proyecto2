@@ -165,7 +165,10 @@ const Layout = ({ children }) => {
 
       <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
         <div className="sidebar-header">
-          <span className="sidebar-logo">Teseeducativo05</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <img src="/tese.png" alt="Logo TeseEducativo05" style={{ width: '32px', height: '32px', borderRadius: '50%' }} />
+            <span className="sidebar-logo">TeseEducativo05</span>
+          </div>
           <span className="sidebar-role-badge">{getRoleLabel()}</span>
           <button className="sidebar-close-btn" onClick={() => setSidebarOpen(false)} aria-label="Close sidebar">
             <Icon name="close" size={20} />
@@ -204,7 +207,10 @@ const Layout = ({ children }) => {
             <span></span>
           </button>
 
-          <h1 className="topbar-title">Plataforma TeseEducativo</h1>
+          <h1 className="topbar-title">
+            <img src="/tese.png" alt="Logo" style={{ width: '24px', height: '24px', marginRight: '10px', verticalAlign: 'middle', borderRadius: '50%' }} />
+            Plataforma TeseEducativo05
+          </h1>
 
           <div className="topbar-actions">
             <NotificationBell />

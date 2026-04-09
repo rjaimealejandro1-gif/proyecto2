@@ -550,6 +550,112 @@ input:checked + .slider:before { transform: translateX(22px); }
   max-width: none;
 }
 
+/* 8. Gallery Stacked Cards */
+.gallery-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  margin: 40px 0;
+}
+
+.gallery-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  width: 100%;
+}
+
+.gallery-container .nav-btn {
+  background: var(--lp-glass-bg);
+  border: 1px solid var(--lp-glass-border);
+  color: var(--lp-text);
+  font-size: 1.5rem;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--lp-transition);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+}
+
+.gallery-container .nav-btn:hover {
+  background: var(--lp-primary);
+  color: var(--lp-dark);
+  transform: scale(1.1);
+}
+
+.stack {
+  width: 80%;
+  max-width: 400px;
+  transition: 0.25s ease;
+}
+
+.stack:hover {
+  transform: rotate(2deg) scale(1.02);
+}
+
+.stack:hover .card:before {
+  transform: translatey(-2%) rotate(-4deg);
+}
+
+.stack:hover .card:after {
+  transform: translatey(2%) rotate(4deg);
+}
+
+.card {
+  aspect-ratio: 3 / 2;
+  border: 4px solid var(--lp-accent);
+  background-color: var(--lp-bg);
+  position: relative;
+  transition: 0.15s ease;
+  cursor: pointer;
+  padding: 5% 5% 15% 5%;
+  box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+}
+
+.card:before,
+.card:after {
+  content: "";
+  position: absolute;
+  height: 100%;
+  width: 100%;
+  border: 4px solid var(--lp-accent);
+  background-color: var(--lp-bg);
+  z-index: -1;
+  top: 0;
+  left: 0;
+  transition: 0.15s ease;
+}
+
+.card:before {
+  transform: translatey(-2%) rotate(-6deg);
+}
+
+.card:after {
+  transform: translatey(2%) rotate(6deg);
+}
+
+.card .image-wrapper {
+  width: 100%;
+  height: 100%;
+  border: 4px solid var(--lp-accent);
+  background-color: var(--lp-bg);
+  overflow: hidden;
+}
+
+.card .image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
 @media (max-width: 768px) {
   .theme-switch-wrapper {
     top: auto;

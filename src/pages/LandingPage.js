@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import StackedGallery from '../components/StackedGallery';
 import '../styles/LandingPage.css';
 
 const LandingPage = () => {
@@ -136,7 +137,10 @@ const LandingPage = () => {
       {/* 1. HERO SECTION */}
       <section className="lp-section reveal-item" ref={addToRefs}>
         <div className="lp-hero-area">
-          <h1 className="section-title">Teseeducativo05</h1>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '20px', marginBottom: '20px' }}>
+            <img src="/tese.png" alt="Logo TeseEducativo05" style={{ width: '120px', height: '120px', borderRadius: '50%', objectFit: 'cover', border: '4px solid var(--lp-accent, #385144)', backgroundColor: '#fff' }} />
+            <h1 className="section-title" style={{ margin: 0 }}>TeseEducativo05</h1>
+          </div>
           <p style={{ marginBottom: '30px' }}>
             El desarrollo web moderno no es solo estética; es la convergencia de autenticación segura, persistencia de datos escalable y el consumo inteligente de servicios externos. Este proyecto demuestra el dominio de flujos asíncronos y arquitectura relacional.
           </p>
@@ -207,7 +211,7 @@ const LandingPage = () => {
 
       {/* 4. REQUISITOS TÉCNICOS */}
       <section className="lp-section reveal-item" ref={addToRefs}>
-        <h2 className="section-title">Ingeniería Web Superior</h2>
+        <h2 className="section-title">INGENIERIA INFORMATICA</h2>
         <p style={{ marginBottom: '40px' }}>
           La aplicación incluye autenticación por roles vía Supabase, gestión de unidades temáticas en bloques LSS, sistemas de cuestionarios asíncronos y consumo de API externa para una experiencia educativa integral.
         </p>
@@ -216,6 +220,12 @@ const LandingPage = () => {
             Infraestructura: React.js • Supabase Cloud • Vanilla CSS3 • HTML5 Semantic • REST APIs
           </p>
         </div>
+      </section>
+
+      {/* 5. GALERÍA INTERACTIVA */}
+      <section className="lp-section reveal-item" ref={addToRefs}>
+        <h2 className="section-title">Fotos</h2>
+        <StackedGallery />
       </section>
 
       {/* 6. DISEÑO DE COLORES */}
@@ -242,6 +252,10 @@ const LandingPage = () => {
           <div className="info-card">
             <h4>Estudiante</h4>
             <p>Rodriguez Lopez Jaime Alejandro</p>
+          </div>
+          <div className="info-card">
+            <h4>Profesor</h4>
+            <p>Leonardo Miguel Moreno Villalba</p>
           </div>
           <div className="info-card">
             <h4>Materia</h4>
