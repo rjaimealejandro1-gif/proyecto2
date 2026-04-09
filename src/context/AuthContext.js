@@ -13,6 +13,17 @@ export const AuthProvider = ({ children }) => {
   const [needsProfile, setNeedsProfile] = useState(false);
   const [authDebug, setAuthDebug] = useState('Initializing...');
   
+  // Failsafe timer to prevent infinite loading
+  useEffect(() => {
+    const watchdog = setTimeout(() => {
+      setLoading((prev) => {
+        if (prev) console.warn("Watchdog forced loading to false to prevent infinite loop.");
+        return false;
+      });
+    }, 6000);
+    return () => clearTimeout(watchdog);
+  }, []);
+
   const isFetching = useRef(false);
   const lastFetchedId = useRef(null);
 
@@ -54,11 +65,13 @@ export const AuthProvider = ({ children }) => {
       setAuthDebug('No valid profile found in DB - Onboarding needed');
       setNeedsProfile(true);
       setRole(null);
+      setLoading(false);
       return null;
     } catch (err) {
       setAuthDebug(`Profile Error: ${err.message}. Defaulting to onboarding.`);
       setNeedsProfile(true);
       setRole(null);
+      setLoading(false);
       return null;
     } finally {
       isFetching.current = false;
