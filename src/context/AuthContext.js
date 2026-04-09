@@ -188,29 +188,50 @@ export const AuthProvider = ({ children }) => {
     try {
       const roleMapInv = { administrador: 1, docente: 2, estudiante: 3 };
       
-      const insertReq = supabase.from('usuarios').insert([
-        {
-          auth_id: user.id,
-          email: user.email,
-          nombre: user.user_metadata?.full_name || user.email.split('@')[0],
-          id_rol: roleMapInv[roleName],
-          foto_url: fotoUrl,
-          contraseña_hash: 'managed_by_supabase_auth',
-        }
-      ]).select();
+      const payload = {
+        auth_id: user.id,
+        email: user.email,
+        nombre: user.user_metadata?.full_name || user.email.split('@')[0],
+        id_rol: roleMapInv[roleName],
+        foto_url: fotoUrl,
+        contraseña_hash: 'managed_by_supabase_auth',
+      };
 
-      const timeoutReq = new Promise((resolve) => 
-        setTimeout(() => resolve({ error: new Error('La base de datos de Supabase no respondió a tiempo. Intenta de nuevo.') }), 6000)
+      const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://zxhsjjbekyqqurmjuttm.supabase.co';
+      const supabaseKey = process.env.REACT_APP_SUPABASE_ANON_KEY || 'sb_publishable_VaTMRRYxk-dJkxe2naNypw_IzwhnzLh';
+      
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token || supabaseKey;
+
+      const fetchPromise = fetch(`${supabaseUrl}/rest/v1/usuarios`, {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const timeoutReq = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('La base de datos de Supabase no respondió a tiempo. (Timeout REST)')), 6000)
       );
 
-      const { error } = await Promise.race([insertReq, timeoutReq]);
+      const res = await Promise.race([fetchPromise, timeoutReq]);
 
-      if (error) {
-        if (error.code === '23505') {
-          await fetchUserProfile(user.id, user.email, true);
-          return { error: null };
+      if (!res.ok) {
+        let errData;
+        try {
+            errData = await res.json();
+        } catch(e) {
+            throw new Error(`HTTP Error: ${res.status} ${res.statusText}`);
         }
-        throw error;
+        if (errData.code === '23505') {
+            await fetchUserProfile(user.id, user.email, true);
+            return { error: null };
+        }
+        throw new Error(errData.message || JSON.stringify(errData));
       }
 
       setRole(roleName);
