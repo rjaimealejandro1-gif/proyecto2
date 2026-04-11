@@ -17,6 +17,11 @@ const DocenteCalificaciones = () => {
   const [nota, setNota] = useState('');
   const [saving, setSaving] = useState(false);
   const [taskDetail, setTaskDetail] = useState(null);
+  const [expandedStudentId, setExpandedStudentId] = useState(null);
+
+  const toggleStudent = (id) => {
+    setExpandedStudentId(prev => prev === id ? null : id);
+  };
 
   useEffect(() => {
     const fetchUsuarioId = async () => {
@@ -308,77 +313,96 @@ const DocenteCalificaciones = () => {
         <div className="dc-students">
           {studentsData.map(student => (
             <div key={student.id} className="dc-student-card">
-              <div className="dc-student-header">
+              <div 
+                className={`dc-student-header ${expandedStudentId === student.id ? 'dc-expanded' : ''}`} 
+                onClick={() => toggleStudent(student.id)}
+                style={{ cursor: 'pointer', userSelect: 'none' }}
+              >
                 <div className="dc-student-info">
                   <div className="dc-student-avatar">{(student.nombre || 'E').charAt(0).toUpperCase()}</div>
                   <div>
-                    <h3>{student.nombre}</h3>
+                    <h3 className="dc-student-name-hover">{student.nombre} <span className="dc-expand-hint">(Clic para ver detalles)</span></h3>
                     <p className="dc-student-email">{student.email}</p>
                   </div>
                 </div>
-                {student.average !== null ? (
-                  <div className={`dc-student-avg-badge ${student.average >= 60 ? 'dc-avg-pass' : 'dc-avg-fail'}`}>
-                    {student.average}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                  {student.average !== null ? (
+                    <div className={`dc-student-avg-badge ${student.average >= 60 ? 'dc-avg-pass' : 'dc-avg-fail'}`}>
+                      {student.average}
+                    </div>
+                  ) : (
+                    <div className="dc-student-avg-badge dc-avg-none">--</div>
+                  )}
+                  <div className="dc-expand-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ transform: expandedStudentId === student.id ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s', color: 'var(--text-tertiary)' }}>
+                      <polyline points="6 9 12 15 18 9"></polyline>
+                    </svg>
                   </div>
-                ) : (
-                  <div className="dc-student-avg-badge dc-avg-none">--</div>
-                )}
+                </div>
               </div>
 
-              {student.activities.length === 0 ? (
-                <p className="dc-no-activities">Sin actividades</p>
-              ) : (
-                <div className="dc-activities-table">
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Actividad</th>
-                        <th>Tipo</th>
-                        <th>Fecha</th>
-                        <th>Estado</th>
-                        <th>Nota</th>
-                        <th>Acciones</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {student.activities.map((activity, idx) => (
-                        <tr key={`${activity.id}-${idx}`} className={activity.nota === null ? 'dc-row-pending' : ''}>
-                          <td className="dc-activity-name">{activity.nombre}</td>
-                          <td>
-                            <span className={`dc-type-badge ${activity.tipo === 'tarea' ? 'dc-type-tarea' : 'dc-type-cuestionario'}`}>
-                              {activity.tipo === 'tarea' ? 'Tarea' : 'Cuestionario'}
-                            </span>
-                          </td>
-                          <td className="dc-activity-date">
-                            {activity.fecha ? new Date(activity.fecha).toLocaleDateString('es-ES') : '--'}
-                          </td>
-                          <td>
-                            {activity.nota !== null ? (
-                              <span className="dc-status-graded">Calificado</span>
-                            ) : activity.entregado ? (
-                              <span className="dc-status-pending" style={{color: 'var(--warning)'}}>Entregado (Pdte.)</span>
-                            ) : (
-                              <span className="dc-status-pending" style={{color: 'var(--text-tertiary)'}}>No entregado</span>
-                            )}
-                          </td>
-                          <td className="dc-activity-grade">
-                            {activity.nota !== null ? (
-                              <span className={`dc-grade-num ${activity.nota >= 60 ? 'dc-grade-pass' : 'dc-grade-fail'}`}>
-                                {activity.nota}/100
-                              </span>
-                            ) : (
-                              <span className="dc-grade-none">--</span>
-                            )}
-                          </td>
-                          <td>
-                            <button className="dc-btn-grade" onClick={() => openGrading(student.id, activity)}>
-                              {activity.nota !== null ? 'Editar' : 'Calificar'}
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {expandedStudentId === student.id && (
+                <div className="dc-student-details-panel">
+                  {student.activities.length === 0 ? (
+                    <p className="dc-no-activities">Sin actividades</p>
+                  ) : (
+                    <div className="dc-activities-table">
+                      <table>
+                        <thead>
+                          <tr>
+                            <th>Actividad</th>
+                            <th>Tipo</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
+                            <th>Nota</th>
+                            <th>Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {student.activities.map((activity, idx) => (
+                            <tr key={`${activity.id}-${idx}`} className={activity.nota === null ? 'dc-row-pending' : ''}>
+                              <td className="dc-activity-name">{activity.nombre}</td>
+                              <td>
+                                <span className={`dc-type-badge ${activity.tipo === 'tarea' ? 'dc-type-tarea' : 'dc-type-cuestionario'}`}>
+                                  {activity.tipo === 'tarea' ? 'Tarea' : 'Examen/Cuestionario'}
+                                </span>
+                              </td>
+                              <td className="dc-activity-date">
+                                {activity.fecha ? new Date(activity.fecha).toLocaleDateString('es-ES') : '--'}
+                              </td>
+                              <td>
+                                {activity.nota !== null ? (
+                                  <span className="dc-status-graded">Presentado / Calificado</span>
+                                ) : activity.entregado ? (
+                                  <span className="dc-status-pending" style={{color: 'var(--warning)'}}>Entregado (Pdte.)</span>
+                                ) : (
+                                  <span className="dc-status-pending" style={{color: 'var(--text-tertiary)'}}>No entregado</span>
+                                )}
+                              </td>
+                              <td className="dc-activity-grade">
+                                {activity.nota !== null ? (
+                                  <span className={`dc-grade-num ${activity.nota >= 60 ? 'dc-grade-pass' : 'dc-grade-fail'}`}>
+                                    {activity.nota}/100
+                                  </span>
+                                ) : (
+                                  <span className="dc-grade-none">--</span>
+                                )}
+                              </td>
+                              <td>
+                                {activity.tipo === 'tarea' ? (
+                                  <button className="dc-btn-grade" onClick={() => openGrading(student.id, activity)}>
+                                    {activity.nota !== null ? 'Editar' : 'Calificar'}
+                                  </button>
+                                ) : (
+                                  <span style={{ fontSize: '12px', color: 'var(--text-tertiary)', fontStyle: 'italic' }}>Auto-calificado</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -503,8 +527,12 @@ const DocenteCalificaciones = () => {
         .dc-student-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
         .dc-student-info { display: flex; align-items: center; gap: 12px; }
         .dc-student-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--accent); color: var(--bg-surface); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 600; }
-        .dc-student-info h3 { font-size: 16px; color: var(--text-primary); margin: 0 0 2px 0; font-family: 'Outfit', sans-serif; }
+        .dc-student-name-hover { font-size: 16px; color: var(--text-primary); margin: 0 0 2px 0; font-family: 'Outfit', sans-serif; display: flex; align-items: center; gap: 8px; }
+        .dc-expand-hint { font-size: 11px; color: var(--text-tertiary); font-weight: 400; font-family: 'Inter', sans-serif; opacity: 0; transition: opacity 0.2s; }
+        .dc-student-header:hover .dc-expand-hint { opacity: 1; }
         .dc-student-email { font-size: 13px; color: var(--text-secondary); margin: 0; }
+        .dc-student-details-panel { border-top: 1px solid var(--border-light); margin-top: 16px; padding-top: 16px; animation: slideDown 0.2s ease-out; }
+        @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
         .dc-student-avg-badge { font-size: 20px; font-weight: 700; padding: 8px 18px; border-radius: 10px; }
         .dc-avg-pass { background: var(--success-subtle); color: var(--success); }
         .dc-avg-fail { background: var(--danger-subtle); color: var(--danger); }
