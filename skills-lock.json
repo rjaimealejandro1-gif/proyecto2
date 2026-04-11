@@ -1,10 +1,30 @@
 {
   "version": 1,
   "skills": {
+    "analogical-thinking": {
+      "source": "andurilcode/skills",
+      "sourceType": "github",
+      "computedHash": "3736d340f3c3cfa9f402b8a0649d2d320a8038c4cccb5002686502a9f4878f95"
+    },
+    "antigravity-workflows": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "bfbda0457686fb49fcf519ba2351419ed8651dcca5e828f87ac9d15a9e336f10"
+    },
+    "critical-thinking-logical-reasoning": {
+      "source": "sammcj/agentic-coding",
+      "sourceType": "github",
+      "computedHash": "f4bea6fc01f51a2605194e39a2d23b8e35e95a0cb3557c465a94518ad97fc244"
+    },
     "frontend-design": {
       "source": "anthropics/skills",
       "sourceType": "github",
       "computedHash": "516bd2154eb843a8240e43d5b285229129853114ad7075a5e141e1c08e408c84"
+    },
+    "matematico-tao": {
+      "source": "sickn33/antigravity-awesome-skills",
+      "sourceType": "github",
+      "computedHash": "92d19f30056411b8ac4258c863e21d64d564a95838f4c57467450646d90069ac"
     },
     "supabase-postgres-best-practices": {
       "source": "supabase/agent-skills",
