@@ -197,8 +197,11 @@ const MisCursos = () => {
                   <h3>{c.nombre_curso}</h3>
                   <p className="mis-curso-desc">{c.descripcion}</p>
                   <div className="mis-curso-teacher">
-                    <span className="mis-curso-teacher-label">Docente:</span>
+                    <span className="mis-curso-teacher-label">Docente: </span>
                     <span className="mis-curso-teacher-name">{courseProgress.teacherName}</span>
+                    <br />
+                    <span className="mis-curso-teacher-label">Inscrito: </span>
+                    <span className="mis-curso-teacher-name">{new Date(c.fecha_inscripcion).toLocaleDateString('es-ES')}</span>
                   </div>
                   <div className="mis-curso-progress">
                     <div className="mis-curso-progress-header">

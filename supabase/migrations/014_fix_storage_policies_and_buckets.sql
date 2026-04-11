@@ -15,6 +15,16 @@ DROP POLICY IF EXISTS "entregas_update_owner_or_admin" ON storage.objects;
 DROP POLICY IF EXISTS "entregas_delete_owner_or_admin" ON storage.objects;
 DROP POLICY IF EXISTS "entregas_read_authenticated" ON storage.objects;
 
+DROP POLICY IF EXISTS "entregas_select_policy" ON storage.objects;
+DROP POLICY IF EXISTS "entregas_insert_policy" ON storage.objects;
+DROP POLICY IF EXISTS "entregas_update_policy" ON storage.objects;
+DROP POLICY IF EXISTS "entregas_delete_policy" ON storage.objects;
+
+DROP POLICY IF EXISTS "materiales_select_policy" ON storage.objects;
+DROP POLICY IF EXISTS "materiales_insert_policy" ON storage.objects;
+DROP POLICY IF EXISTS "materiales_update_policy" ON storage.objects;
+DROP POLICY IF EXISTS "materiales_delete_policy" ON storage.objects;
+
 -- 3. Entregas (Tasks/File Uploads) Policies
 CREATE POLICY "entregas_select_policy"
 ON storage.objects FOR SELECT TO authenticated

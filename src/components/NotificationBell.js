@@ -26,8 +26,22 @@ const NotificationBell = () => {
   useEffect(() => {
     if (!usuarioId) return;
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
-    return () => clearInterval(interval);
+
+    const channel = supabase
+      .channel('custom-all-channel')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'notificaciones', filter: `id_usuario=eq.${usuarioId}` },
+        (payload) => {
+          setNotifications((prev) => [payload.new, ...prev]);
+          setUnreadCount((prev) => prev + 1);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [usuarioId]);
 
@@ -251,7 +265,13 @@ const NotificationBell = () => {
           margin-top: 6px;
         }
         @media (max-width: 768px) {
-          .nb-dropdown { width: 300px; right: -80px; }
+          .nb-dropdown { 
+            width: calc(100vw - 32px); 
+            max-width: 360px;
+            position: fixed;
+            top: 70px;
+            right: 16px;
+          }
         }
       `}</style>
     </div>

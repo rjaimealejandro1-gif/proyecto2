@@ -233,11 +233,14 @@ const CatalogCourses = () => {
                   <p className="cc-card-desc">{course.descripcion}</p>
 
                   <div className="cc-card-meta">
-                    <span className="cc-card-teacher">
+                    <span className="cc-card-teacher" title="Docente">
                       👤 {course.usuarios?.nombre || 'Docente'}
                     </span>
-                    <span className="cc-card-students">
-                      👥 {studentCount} estudiante{studentCount !== 1 ? 's' : ''}
+                    <span className="cc-card-date" title="Fecha de Creación">
+                      📅 {new Date(course.fecha_creacion).toLocaleDateString('es-ES')}
+                    </span>
+                    <span className="cc-card-students" title="Estudiantes">
+                      👥 {studentCount}
                     </span>
                   </div>
 

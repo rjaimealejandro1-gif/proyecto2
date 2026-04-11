@@ -112,29 +112,33 @@ const DocenteCalificaciones = () => {
 
         const activities = [];
 
-        studentDeliveries.forEach(del => {
+        allTasks.forEach(task => {
+          const del = studentDeliveries.find(d => d.id_tarea === task.id_tarea);
           activities.push({
-            id: del.id_entrega,
+            id: task.id_tarea,
             tipo: 'tarea',
-            nombre: taskMap[del.id_tarea] || 'Tarea',
-            nota: del.calificacion,
-            fecha: del.fecha_entrega,
-            evidencia: del.evidencia,
-            archivo_url: del.archivo_url,
-            archivo_nombre: del.archivo_nombre,
-            tipo_entrega: del.tipo_entrega,
-            nota_docente: del.nota_docente,
-            deliveryId: del.id_entrega,
+            nombre: task.titulo_tarea || 'Tarea',
+            nota: del ? del.calificacion : null,
+            fecha: del ? del.fecha_entrega : null,
+            evidencia: del ? del.evidencia : null,
+            archivo_url: del ? del.archivo_url : null,
+            archivo_nombre: del ? del.archivo_nombre : null,
+            tipo_entrega: del ? del.tipo_entrega : null,
+            nota_docente: del ? del.nota_docente : null,
+            deliveryId: del ? del.id_entrega : null,
+            entregado: !!del,
           });
         });
 
-        studentQuizGrades.forEach(qg => {
+        allQuizzes.forEach(quiz => {
+          const qg = studentQuizGrades.find(g => g.id_referencia === quiz.id_cuestionario);
           activities.push({
-            id: qg.id_calificacion,
+            id: quiz.id_cuestionario,
             tipo: 'cuestionario',
-            nombre: quizMap[qg.id_referencia] || 'Cuestionario',
-            nota: qg.nota_obtenida,
-            fecha: qg.fecha_calificacion,
+            nombre: quiz.titulo_cuestionario || 'Cuestionario',
+            nota: qg ? qg.nota_obtenida : null,
+            fecha: qg ? qg.fecha_calificacion : null,
+            entregado: !!qg,
           });
         });
 
@@ -197,11 +201,13 @@ const DocenteCalificaciones = () => {
         const updateData = { calificacion: grade };
         if (nota.trim()) updateData.nota_docente = nota.trim();
 
-        const { error: updateError } = await supabase
-          .from('entregas')
-          .update(updateData)
-          .eq('id_entrega', gradingDelivery.deliveryId);
-        if (updateError) throw updateError;
+        if (gradingDelivery.deliveryId) {
+          const { error: updateError } = await supabase
+            .from('entregas')
+            .update(updateData)
+            .eq('id_entrega', gradingDelivery.deliveryId);
+          if (updateError) throw updateError;
+        }
 
         const { data: existing } = await supabase
           .from('calificaciones')
@@ -349,8 +355,10 @@ const DocenteCalificaciones = () => {
                           <td>
                             {activity.nota !== null ? (
                               <span className="dc-status-graded">Calificado</span>
+                            ) : activity.entregado ? (
+                              <span className="dc-status-pending" style={{color: 'var(--warning)'}}>Entregado (Pdte.)</span>
                             ) : (
-                              <span className="dc-status-pending">Pendiente</span>
+                              <span className="dc-status-pending" style={{color: 'var(--text-tertiary)'}}>No entregado</span>
                             )}
                           </td>
                           <td className="dc-activity-grade">
